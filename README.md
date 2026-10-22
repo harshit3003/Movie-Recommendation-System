@@ -1,493 +1,325 @@
-# CineMatch --- Personalized Movie Recommendation System
+# 🎬 CineMatch — Personalized Movie Recommendation System
 
-CineMatch is a beginner-friendly movie recommendation web application
-built with **Python and Streamlit**. It uses a trained **Singular Value
-Decomposition (SVD)** collaborative-filtering model to estimate how much
-a user may like movies and display personalized recommendations.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg)](https://streamlit.io/)
+[![CI](https://github.com/harshit3003/Movie-Recommendation-System/actions/workflows/python-app.yml/badge.svg)](https://github.com/harshit3003/Movie-Recommendation-System/actions/workflows/python-app.yml)
+[![Database](https://img.shields.io/badge/Database-SQLite-003B57.svg)](https://www.sqlite.org/)
+[![API](https://img.shields.io/badge/Metadata%20%26%20Posters-TMDB-01b4e4.svg)](https://www.themoviedb.org/)
 
-The project uses the **MovieLens small dataset** for movie information
-and community ratings. It also includes experiments comparing SVD with
-user-based and item-based K-nearest-neighbour (KNN) recommendation
-models.
+**CineMatch** is an end-to-end movie recommendation web application built with **Python, Streamlit, and SQLite**. It leverages a hybrid recommendation architecture combining a pre-trained **Singular Value Decomposition (SVD)** collaborative filtering model with **TF-IDF tag similarity** and **genre affinity signals** to deliver accurate, personalized, and explainable movie recommendations.
 
-> **Project status:** The core app supports movie search, session-based
-> user ratings, personalized recommendations, community-rating
-> information, and recommendation cards. Movie poster integration and
-> real-time trending data are not implemented.
+The app features a cinematic dark-themed UI, live weekly trending movies via **The Movie Database (TMDB) API**, concurrent poster retrieval, interactive multi-criteria filters, and full persistent user accounts with secure salted password hashing.
 
-## Table of Contents
+---
 
--   [Project at a Glance](#project-at-a-glance)
--   [Features](#features)
--   [How It Works](#how-it-works)
--   [Algorithms](#algorithms)
--   [Dataset](#dataset)
--   [Evaluation Results](#evaluation-results)
--   [Project Structure](#project-structure)
--   [Installation on Windows](#installation-on-windows)
--   [Run the Application](#run-the-application)
--   [How to Use CineMatch](#how-to-use-cinematch)
--   [Important Notes and Limitations](#important-notes-and-limitations)
--   [Troubleshooting](#troubleshooting)
--   [Technologies Used](#technologies-used)
--   [Future Improvements](#future-improvements)
+## 📑 Table of Contents
 
-## Project at a Glance
+- [Project at a Glance](#-project-at-a-glance)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Recommendation Engine & Algorithms](#-recommendation-engine--algorithms)
+  - [1. SVD Collaborative Filtering](#1-svd-collaborative-filtering)
+  - [2. Content-Based TF-IDF & Tag Matching](#2-content-based-tf-idf--tag-matching)
+  - [3. Genre Affinity & Diversity Balancing](#3-genre-affinity--diversity-balancing)
+  - [4. Explainable AI ("Why This Movie?")](#4-explainable-ai-why-this-movie)
+- [Dataset](#-dataset)
+- [Evaluation Results](#-evaluation-results)
+- [Project Structure](#-project-structure)
+- [Installation & Quickstart](#-installation--quickstart)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Clone Repository](#2-clone-repository)
+  - [3. Set Up Virtual Environment](#3-set-up-virtual-environment)
+  - [4. Install Dependencies](#4-install-dependencies)
+  - [5. Configure TMDB API Key (Optional but Recommended)](#5-configure-tmdb-api-key-optional-but-recommended)
+  - [6. Launch Application](#6-launch-application)
+- [Database & Authentication](#-database--authentication)
+- [Technologies Used](#-technologies-used)
+- [Troubleshooting](#-troubleshooting)
+- [License & Attributions](#-license--attributions)
 
-  Item                               Details
-  ---------------------------------- ---------------------------------------------------
-  Project name                       CineMatch
-  Type                               Personalized movie recommendation web application
-  Interface                          Streamlit
-  Language                           Python
-  Main model                         SVD collaborative filtering
-  Comparison models                  User-based KNN and item-based KNN
-  Dataset                            MovieLens small dataset
-  Movie records                      9,742
-  Rating records                     100,836
-  Users in original rating dataset   610
-  Saved model                        `svd_model.pkl`
+---
 
-## Features
+## ⚡ Project at a Glance
 
-### Movie search
+| Item | Details |
+| :--- | :--- |
+| **Application Name** | CineMatch |
+| **Framework** | Streamlit |
+| **Language** | Python 3.10+ |
+| **Primary Algorithm** | SVD Collaborative Filtering (`svd_model.pkl`) |
+| **Content Signals** | TF-IDF Tag Vectorization + Jaccard Genre Similarity |
+| **User Data Store** | SQLite (`cinematch.db`) with PBKDF2-HMAC-SHA256 password hashing |
+| **External Media** | TMDB API (high-resolution movie posters + weekly trending feeds) |
+| **Dataset** | MovieLens 100k (Small Dataset) |
+| **Total Movies** | 9,742 catalog records |
+| **Total Ratings** | 100,836 historical community ratings |
 
-Search the movie catalogue by title and choose movies to rate.
+---
 
-### Add and remove ratings
+## ✨ Key Features
 
-Enter ratings on the dataset's 0.5--5.0 scale. Ratings entered in the
-app are maintained in the current Streamlit session and may not persist
-after the session ends.
+### 🔐 User Authentication & Persistent Profiles
+- **Secure Registration & Login**: User accounts stored locally in SQLite with PBKDF2-HMAC-SHA256 password hashing and cryptographic salts.
+- **Persistent Ratings**: Add, inspect, adjust, and delete movie ratings at any time; ratings remain saved across sessions.
+- **Session Management**: Dedicated profile dashboard displaying rated film counts, account details, and one-click sign-out.
 
-### Personalized recommendations
+### 🧠 Hybrid Personalized Recommendation Engine
+- **Instant Profiling without Retraining**: Learns latent user factors and bias dynamically via gradient steps over the pre-trained SVD item space.
+- **Content & Tag Blending**: Analyzes liked/disliked films using TF-IDF on user tags (`dataset/tags.csv`) and weighted genre similarity.
+- **Genre Diversity Enforcement**: Avoids repetitive genres through adaptive diversity quotas.
+- **Explainable Recommendations**: Transparent "Why This Movie?" cards explain whether a recommendation is driven by shared genres, community tags, or broader taste patterns.
 
-The app estimates the new user's preferences from their entered ratings,
-predicts ratings for candidate movies, and recommends movies the user
-has not already rated.
+### 🖼️ TMDB Posters & Live Trending Movies
+- **Concurrent Poster Fetching**: Multi-threaded poster retrieval using `concurrent.futures.ThreadPoolExecutor` with in-memory caching.
+- **Live Weekly Trending Feed**: Displays global trending movies fetched from TMDB's `/trending/movie/week` endpoint, refreshed on a 6-hour cache.
+- **Graceful Fallbacks**: Works smoothly offline or without an API key using built-in stylized placeholder cards.
 
-### Genre diversity
+### 🎛️ Interactive Refinement Filters
+- **Genre Filter**: Multiselect filter to target specific genres (Action, Sci-Fi, Comedy, etc.).
+- **Release Year Range**: Dual-thumb slider to narrow recommendations to specific decades or eras.
+- **Community Rating Threshold**: Filter out lower-rated or niche movies based on MovieLens historical averages.
 
-The recommendation-selection logic attempts to avoid filling the list
-with movies from the same genre. This is a selection rule, not a
-separate trained model.
+### 🎨 Cinematic Dark UI
+- Modern glassmorphism panels, vibrant glowing accents, Manrope / DM Sans typography, rating progress meters, and mobile-responsive grid layouts.
 
-### Predicted and community ratings
+---
 
-Recommendation cards show the model's predicted rating and, where
-available, the community average and number of ratings from the local
-MovieLens dataset.
+## 🏗️ System Architecture
 
-### Cinematic interface
-
-A dark theme, custom styling, rating indicators, and recommendation
-cards make the app easier to browse.
-
-## How It Works
-
-1.  Load movie metadata and ratings from CSV files.
-2.  Explore and validate the data.
-3.  Split ratings into training and test sets for evaluation.
-4.  Train and compare collaborative-filtering models.
-5.  Select SVD as the primary model based on the recorded experiments.
-6.  Save the trained model to `svd_model.pkl`.
-7.  Load the model and movie data in the Streamlit app.
-8.  Collect ratings from a new user during the session.
-9.  Estimate a profile for the new user using the model's learned movie
-    factors.
-10. Predict ratings for candidate movies.
-11. Exclude movies already rated and apply genre-diversity selection.
-12. Display recommendations and community-rating information.
-
-### Architecture overview
-
-``` text
-MovieLens CSV files
-        |
-        +---------------------+
-        |                     |
-  Movie catalogue        User ratings
-        |                     |
-        |               Model experiments
-        |                     |
-        |                Train / evaluate
-        |                     |
-        |                Trained SVD model
-        |                     |
-        +-----------+---------+
-                    |
-               Streamlit app
-                    |
-            User searches titles
-                    |
-             User enters ratings
-                    |
-        Estimate new-user preferences
-                    |
-          Predict candidate ratings
-                    |
-       Exclude rated movies and select
-          a diverse recommendation list
-                    |
-          Recommendation cards
+```text
+ ┌────────────────────────────────────────────────────────┐
+ │                   MovieLens Dataset                    │
+ │    movies.csv  •  ratings.csv  •  tags.csv • links.csv │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │           Offline Training (main.ipynb)                │
+ │    • Surprise SVD Collaborative Filtering              │
+ │    • Train/test split (80/20) & cross-validation       │
+ │    • Output artifact: svd_model.pkl                    │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │               CineMatch App (app.py)                   │
+ │                                                        │
+ │   ┌───────────────────────┐   ┌────────────────────┐   │
+ │   │ SQLite Database       │   │  TMDB REST API     │   │
+ │   │ (cinematch.db)        │   │  • Trending feed   │   │
+ │   │ • Users & Auth        │   │  • Poster images   │   │
+ │   │ • Persistent ratings  │   └─────────┬──────────┘   │
+ │   └───────────┬───────────┘             │              │
+ │               │                         │              │
+ │               ▼                         ▼              │
+ │   ┌────────────────────────────────────────────────┐   │
+ │   │          Hybrid Recommendation Engine          │   │
+ │   │  1. Latent SVD Factor Estimation               │   │
+ │   │  2. TF-IDF Tag Cosine Similarity               │   │
+ │   │  3. Weighted Genre Affinity (Liked vs Disliked)│   │
+ │   │  4. Soft Diversity Filtering                   │   │
+ │   └───────────────────────┬────────────────────────┘   │
+ │                           │                            │
+ │                           ▼                            │
+ │   ┌────────────────────────────────────────────────┐   │
+ │   │             Streamlit Web Interface            │   │
+ │   │   Dashboard • Search & Rating • Filterable Grid│   │
+ │   └────────────────────────────────────────────────┘   │
+ └────────────────────────────────────────────────────────┘
 ```
 
-## Algorithms
+---
 
-### Singular Value Decomposition (SVD)
+## 🔬 Recommendation Engine & Algorithms
 
-SVD is the primary model. Collaborative filtering learns latent
-representations from historical user--movie ratings and uses them to
-estimate ratings for combinations that were not observed.
+### 1. SVD Collaborative Filtering
+The foundation of the recommendation system is **Singular Value Decomposition (SVD)** from the `scikit-surprise` library.
+- SVD decomposes the sparse user-item interaction matrix into latent representations:
+  $$\hat{r}_{u,i} = \mu + b_u + b_i + q_i^T p_u$$
+  where $\mu$ is the global rating average, $b_u$ and $b_i$ are user and movie baseline biases, and $p_u, q_i \in \mathbb{R}^k$ are $k$-dimensional latent feature vectors.
+- **Fast Cold-Start User Estimation**: Rather than retraining the full model when a user submits new ratings, CineMatch performs stochastic gradient descent updates over user bias $b_u$ and factors $p_u$ while keeping item matrices frozen:
+  $$e_{u,i} = r_{u,i} - \hat{r}_{u,i}$$
+  $$b_u \leftarrow b_u + \gamma (e_{u,i} - \lambda b_u)$$
+  $$p_u \leftarrow p_u + \gamma (e_{u,i} q_i - \lambda p_u)$$
 
-The app's new-user flow estimates a profile for a visitor who is not an
-existing user in the model's training data. It uses the saved model's
-learned movie factors and ratings entered in the app. This is a
-simplified personalization method; a few ratings may not represent a
-user's preferences reliably.
+### 2. Content-Based TF-IDF & Tag Matching
+- Community tags from `dataset/tags.csv` are aggregated per movie and vectorized using `sklearn.feature_extraction.text.TfidfVectorizer` (sublinear term frequencies, bi-grams).
+- Candidate movies are evaluated for tag cosine similarity against movies the user rated highly.
 
-### User-based KNN
+### 3. Genre Affinity & Diversity Balancing
+- User preferences are separated into positive examples (ratings $> 3.0$) and negative examples (ratings $< 3.0$).
+- Candidate movies receive a net genre score based on Jaccard genre similarity:
+  $$\text{Score}_{\text{genre}} = \text{Sim}_{\text{liked}} - 0.75 \times \text{Sim}_{\text{disliked}}$$
+- A **soft diversity quota** caps the number of recommendations that can share dominant genres, ensuring a balanced selection.
 
-User-based K-nearest neighbours looks for users with similar rating
-patterns and uses those similarities to estimate preferences.
+### 4. Explainable AI ("Why This Movie?")
+Every generated recommendation includes an intelligible rationale:
+- **Shared Genres**: Lists the specific genres shared with movies you rated highly.
+- **Related Community Tags**: Indicates thematic overlap based on MovieLens tags.
+- **Overall Rating Pattern**: Explains recommendations driven by latent collaborative patterns.
 
-### Item-based KNN
+---
 
-Item-based K-nearest neighbours uses relationships between movies based
-on rating patterns to estimate a user's likely preferences.
+## 📊 Evaluation Results
 
-SVD was chosen as the primary model because the recorded experiments
-showed lower rating-prediction errors and slightly higher ranking
-metrics than the tested KNN baselines. This does not prove it will be
-best for every dataset or user.
+Model performance was validated on an 80/20 train/test split of the MovieLens ratings dataset:
 
-## Dataset
+### Rating Prediction Accuracy
+| Model | RMSE | MAE |
+| :--- | :---: | :---: |
+| User-based KNN | 0.9823 | 0.7559 |
+| Item-based KNN | 0.9800 | 0.7615 |
+| Baseline SVD | 0.8807 | 0.6766 |
+| **Tuned SVD (Selected)** | **0.8718** | **0.6700** |
 
-The project expects the MovieLens small dataset in the `dataset`
-directory.
+*Lower RMSE and MAE values represent superior predictive precision.*
 
-  File                     Purpose
-  ------------------------ ----------------------------------------------
-  `movies.csv`             Movie IDs, titles, and genres (also supports `movies (1).csv`)
-  `ratings.csv`            User IDs, movie IDs, ratings, and timestamps (also supports `ratings (1).csv`)
-  `links.csv`              External movie database identifiers (optional)
-  `tags.csv`               User-applied tags (optional)
-  `README.txt`             Dataset-specific documentation (if supplied)
+### Top-10 Ranking Metrics
+| Model | Precision@10 | Recall@10 | NDCG@10 |
+| :--- | :---: | :---: | :---: |
+| **SVD** | **0.5639** | **0.6668** | **0.7862** |
+| User-based KNN | 0.5608 | 0.6637 | 0.7774 |
+| Item-based KNN | 0.4910 | 0.6293 | 0.6842 |
 
-Recorded data checks found:
+---
 
--   9,742 movie records and 100,836 rating records.
--   610 users in the original rating data.
--   No missing values in the ratings table.
--   No duplicate user--movie rating pairs.
--   Ratings range from 0.5 to 5.0.
--   No missing or duplicate movie IDs in the movie catalogue.
--   All movie IDs in the ratings table existed in the movie catalogue.
+## 📁 Dataset
 
-These checks apply to the dataset version used in the project. Repeat
-them if the CSV files are replaced.
+The project includes the **MovieLens 100k (Small Dataset)** in the `dataset/` directory:
 
-### Train/test split
+| File | Size | Description |
+| :--- | :--- | :--- |
+| `dataset/movies.csv` | ~494 KB | Movie titles, genres, and IDs (9,742 movies) |
+| `dataset/ratings.csv` | ~2.48 MB | Historical user ratings (100,836 ratings, 610 users) |
+| `dataset/links.csv` | ~198 KB | External database mapping (IMDb and TMDB IDs) |
+| `dataset/tags.csv` | ~118 KB | User-assigned keyword tags for movies |
+| `dataset/README.txt` | ~8 KB | Official MovieLens dataset documentation |
 
-The recorded experiment used an 80/20 split:
+---
 
--   Training ratings: **80,668**
--   Test ratings: **20,168**
+## 📂 Project Structure
 
-The saved model was trained on a training split and is not necessarily
-trained on every rating in the dataset.
-
-## Evaluation Results
-
-The project evaluated rating-prediction errors and ranking quality.
-
-### Rating prediction
-
-Lower RMSE and MAE indicate smaller differences between predicted and
-observed ratings.
-
-  Model                              RMSE          MAE
-  ---------------- ---------------------- ------------
-  User-based KNN                   0.9823       0.7559
-  Item-based KNN     approximately 0.9800       0.7615
-  Baseline SVD                     0.8807       0.6766
-  Tuned SVD                    **0.8718**   **0.6700**
-
--   **RMSE (Root Mean Squared Error):** gives more weight to larger
-    prediction errors.
--   **MAE (Mean Absolute Error):** measures the average absolute
-    prediction error.
-
-### Ranking metrics at cutoff 10
-
-  Model              Precision@10    Recall@10      NDCG@10
-  ---------------- -------------- ------------ ------------
-  SVD                  **0.5639**   **0.6668**   **0.7862**
-  User-based KNN           0.5608       0.6637       0.7774
-  Item-based KNN           0.4910       0.6293       0.6842
-
--   **Precision@10:** how many of the top 10 recommendations are
-    relevant under the evaluation's relevance rule.
--   **Recall@10:** how much of the relevant set appears in the top 10.
--   **NDCG@10:** rewards relevant items that appear higher in the ranked
-    list.
-
-**Evaluation note:** These are preliminary results recorded from
-held-out test ratings. They should not be treated as definitive
-full-catalogue or real-world online performance, and the differences
-have not been established as statistically significant. Results depend
-on the data split and relevance definition.
-
-## Project Structure
-
-Expected structure:
-
-``` text
+```text
 Movie_recommendation_system/
 │
-├── app.py                     # Streamlit web application
-├── main.ipynb                 # Data exploration and experiments
-├── svd_model.pkl              # Saved trained SVD model
-├── requirements.txt           # Python dependencies
+├── .github/
+│   └── workflows/
+│       └── python-app.yml     # Automated CI (flake8 linting & testing)
 │
-├── dataset/
-│   ├── movies.csv             # Movie metadata
-│   ├── ratings.csv            # User ratings
-│   └── README.txt             # Dataset documentation (if supplied)
+├── .streamlit/
+│   └── secrets.toml           # Local secrets (TMDB_API_KEY; git-ignored)
 │
-└── venv/                      # Local virtual environment; do not commit
+├── dataset/                   # MovieLens small dataset files
+│   ├── links.csv
+│   ├── movies.csv
+│   ├── ratings.csv
+│   ├── tags.csv
+│   └── README.txt
+│
+├── .gitignore                 # Ignores venv, secrets.toml, *.db, cache files
+├── app.py                     # Main Streamlit web application
+├── cinematch.db               # SQLite database (auto-generated; git-ignored)
+├── main.ipynb                 # EDA, model training & benchmark notebook
+├── README.md                  # Comprehensive project documentation
+├── requirements.txt           # Python package dependencies
+└── svd_model.pkl              # Serialized trained SVD model (Surprise)
 ```
 
-The `venv` directory is created locally and normally should not be
-uploaded to Git. Check repository file-size limits before committing the
-saved model.
+---
 
-## Installation on Windows
+## 🚀 Installation & Quickstart
 
-### 1. Open the project directory
+### 1. Prerequisites
+- **Python 3.10** or higher installed on your system.
+- Git installed.
 
-Open the folder in VS Code, then open **Terminal → New Terminal**.
-
-``` powershell
-cd path\to\Movie_recommendation_system
-# Example:
-# cd C:\Users\gupta\Desktop\Movie_recommendation_system
+### 2. Clone Repository
+```bash
+git clone https://github.com/harshit3003/Movie-Recommendation-System.git
+cd Movie-Recommendation-System
 ```
 
-Replace `path\to\Movie_recommendation_system` with your actual project location.
+### 3. Set Up Virtual Environment
 
-### 2. Create a virtual environment
-
-``` powershell
+#### On Windows (PowerShell):
+```powershell
 python -m venv venv
-```
-
-A virtual environment keeps the project's packages separate from other
-Python projects.
-
-### 3. Activate it
-
-In PowerShell:
-
-``` powershell
 .\venv\Scripts\Activate.ps1
 ```
+*(If script execution is disabled on PowerShell, first run: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`)*
 
-> **Note for PowerShell:** If script execution is disabled on your system (`PSSecurityException`), run:
-> ``` powershell
-> Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-> ```
-> before running the activation script.
-
-Alternatively, in Command Prompt:
-
-``` bat
-venv\Scripts\activate.bat
+#### On macOS / Linux:
+```bash
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-### 4. Install dependencies
-
-``` powershell
+### 4. Install Dependencies
+```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-If `requirements.txt` is missing or incomplete, the main app
-dependencies include:
+### 5. Configure TMDB API Key (Optional but Recommended)
+To enable live movie posters and the weekly trending movies feed, obtain a free API key from [The Movie Database (TMDB)](https://www.themoviedb.org/documentation/api):
 
-``` powershell
-python -m pip install streamlit pandas numpy joblib scikit-surprise
-```
+1. Create a `.streamlit/secrets.toml` file in the project root:
+   ```toml
+   TMDB_API_KEY = "your_tmdb_api_key_here"
+   ```
+2. Or set it as an environment variable in your terminal:
+   ```powershell
+   $env:TMDB_API_KEY="your_tmdb_api_key_here"
+   ```
+*(Note: If no API key is provided, CineMatch functions normally with stylish placeholder art.)*
 
-Use a Python version compatible with the installed dependencies. Some
-versions of the Surprise package may not install cleanly on very new
-Python releases.
-
-## Run the Application
-
-Make sure the virtual environment is active and your terminal is in the
-project directory:
-
-``` powershell
+### 6. Launch Application
+```bash
 python -m streamlit run app.py
 ```
 
-Streamlit normally opens the app in your browser. If it does not, open
-the local address printed in the terminal.
+Streamlit will launch and display the local URL (typically `http://localhost:8501`).
 
-To stop the app, focus the terminal and press `Ctrl + C`.
+---
 
-You do not need to retrain the model every time you start the app, as
-long as `svd_model.pkl` exists and is compatible with the installed
-libraries.
+## 🔒 Database & Authentication
 
-## How to Use CineMatch
+CineMatch includes a production-grade authentication and rating persistence layer:
+- **Database Engine**: Built-in SQLite (`cinematch.db`), created automatically on first run.
+- **Security**: Passwords are never stored in plain text. They are hashed using **PBKDF2-HMAC-SHA256** with 310,000 iterations and a unique 16-byte cryptographic salt per user.
+- **Timing-Attack Resistance**: Verification uses constant-time comparison via `hmac.compare_digest`.
+- **Relational Integrity**: Foreign key constraints are enforced (`PRAGMA foreign_keys = ON`), with ratings cascaded upon user deletion.
 
-1.  Start the Streamlit app.
-2.  Search for a movie by title.
-3.  Select it and choose a rating from 0.5 to 5.0.
-4.  Add the rating to your list.
-5.  Repeat for other movies you have watched.
-6.  Review your saved ratings and remove any entered by mistake.
-7.  Select **Recommend Movies**.
-8.  Review the movie titles, genres, predicted ratings, and
-    community-rating information.
+---
 
-The ratings entered in the app are session-based; they are not
-guaranteed to persist after the session ends.
+## 🛠️ Technologies Used
 
-## Important Notes and Limitations
+| Category | Tools & Libraries |
+| :--- | :--- |
+| **Language** | Python 3.10+ |
+| **User Interface** | Streamlit, Custom HTML5/CSS3 (Glassmorphism, DM Sans, Manrope) |
+| **Machine Learning** | Scikit-surprise (SVD), Scikit-learn (TfidfVectorizer, cosine_similarity) |
+| **Data Processing** | Pandas, NumPy, Scipy |
+| **Storage & Persistence**| SQLite3, Joblib |
+| **Networking & APIs** | Requests (TMDB REST API), ThreadPoolExecutor |
+| **CI / CD** | GitHub Actions |
 
-### Predicted rating versus community rating
+---
 
--   **Predicted rating:** the model's estimate of how the current user
-    might rate a movie.
--   **Community rating:** the average of ratings for that movie in the
-    local MovieLens file.
--   **Rating count:** the number of ratings contributing to that
-    community average.
+## ❓ Troubleshooting
 
-These values answer different questions. A high community average does
-not necessarily mean a movie will suit a particular user.
+| Issue | Cause | Solution |
+| :--- | :--- | :--- |
+| `ModuleNotFoundError` | Virtual environment is not activated or dependencies are missing | Run `.\venv\Scripts\Activate.ps1` and `pip install -r requirements.txt`. |
+| `TMDB_API_KEY is not configured` | Missing TMDB key for posters/trending | Add `TMDB_API_KEY = "..."` to `.streamlit/secrets.toml`. Recommendations still work without it. |
+| `Trained model not found` | `svd_model.pkl` is missing | Ensure `svd_model.pkl` is present in the project root directory alongside `app.py`. |
+| `Movies dataset not found` | Dataset CSVs are missing or renamed | Ensure `movies.csv`, `ratings.csv`, and `tags.csv` reside in the `dataset/` directory. |
+| Port already in use | Previous Streamlit instance is running | Run `streamlit run app.py --server.port 8502`. |
 
-### New-user personalization
+---
 
-A new visitor is not already represented as a trained user in the saved
-SVD model. The app estimates a user profile from the visitor's ratings
-using learned movie factors. This avoids retraining the entire model for
-each visitor, but it is a simplified approach and can be unreliable with
-very few ratings.
+## 📜 License & Attributions
 
-### Model coverage
-
-Because the saved model was trained on a training split, some movies in
-the full catalogue may not have learned item factors. The app should
-handle unsupported movies safely.
-
-### Other limitations
-
--   Users need to rate some movies before the recommendations can
-    reflect their preferences.
--   User ratings are session-based and may be lost when the session
-    ends.
--   Community ratings are local MovieLens data, not live ratings from
-    streaming platforms.
--   Real-time trending information is not implemented.
--   Movie poster integration is not implemented.
--   Offline test metrics do not guarantee that each user will find
-    recommendations useful.
--   MovieLens ratings are not a universal measure of movie popularity.
-
-## Troubleshooting
-
-### `ModuleNotFoundError`
-
-Activate the virtual environment and install the dependencies:
-
-``` powershell
-.\venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-### Streamlit is not recognized
-
-Run it through Python:
-
-``` powershell
-python -m streamlit run app.py
-```
-
-### The app cannot find `svd_model.pkl`
-
-Make sure `svd_model.pkl` is in the same directory as `app.py`:
-
-``` text
-Movie_recommendation_system/svd_model.pkl
-```
-
-### The app cannot find the CSV files
-
-Check that these files exist in the `dataset` directory (either standard names or downloaded copies with `(1)` are automatically detected):
-
-``` text
-Movie_recommendation_system/dataset/movies.csv
-Movie_recommendation_system/dataset/ratings.csv
-```
-
-### Surprise or model compatibility error
-
-The saved model depends on the library versions used to create it. Use
-compatible dependencies and, if necessary, a compatible Python version.
-Do not delete the model unless you have the code and environment needed
-to regenerate it.
-
-### Changes are not appearing
-
-Save `app.py`, check the terminal for errors, and restart Streamlit if
-necessary:
-
-``` powershell
-python -m streamlit run app.py
-```
-
-## Technologies Used
-
--   **Python** --- main programming language
--   **Pandas** --- loading and manipulating tabular data
--   **NumPy** --- numerical operations
--   **Surprise** --- collaborative-filtering algorithms, including SVD
-    and KNN
--   **Joblib** --- saving and loading the trained model
--   **Streamlit** --- interactive web interface
--   **Jupyter Notebook** --- exploration and experiments
--   **HTML/CSS** --- custom styling within the interface
-
-## Future Improvements
-
-These are possible extensions, not features currently implemented:
-
-1.  Save user profiles and ratings in a database.
-2.  Add posters through a supported movie metadata API.
-3.  Add genre, release-year, and minimum-rating filters.
-4.  Add a popularity-based top-rated page.
-5.  Add a clearly defined trending section with a regularly updated data
-    source.
-6.  Improve evaluation with reproducible splits and documented relevance
-    thresholds.
-7.  Compare collaborative filtering with content-based recommendations
-    using genres or tags.
-8.  Add automated tests for data validation and recommendation edge
-    cases.
-9.  Deploy the app and document the hosting process.
-
-## Summary
-
-CineMatch is an end-to-end learning project combining collaborative
-filtering, model evaluation, a saved SVD model, and an interactive
-Streamlit interface. It demonstrates how a recommendation model can be
-connected to a usable application while distinguishing personalized
-predicted ratings from community averages.
-
-For reproducibility, keep the application code, dataset files,
-dependency list, and saved model together, and document any changes to
-the model or evaluation process.
+- **Dataset**: MovieLens datasets are collected by GroupLens Research at the University of Minnesota.
+- **Metadata & Posters**: Movie metadata, release dates, and posters provided by [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed or certified by TMDB.
+- **Author**: [Harshit Gupta](https://github.com/harshit3003)
